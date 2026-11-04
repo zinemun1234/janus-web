@@ -1,0 +1,7 @@
+node_modules/
+.next/
+__pycache__/
+*.pyc
+api/models/*.pt
+api/models/spm.model
+.vercel

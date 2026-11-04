@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/generate.py": {
+      "memory": 2048,
+      "maxDuration": 300
+    }
+  },
+  "env": {
+    "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
+  }
+}
