@@ -180,11 +180,15 @@ export default function Demo() {
                 <>PROMPT #{sel + 1}/40 · <span className={`cat c-${ITEMS[sel].cat}`}>{CAT_KO[ITEMS[sel].cat]}</span></>
               ) : "CUSTOM PROMPT — 사전생성 없음, 실시간 생성 전용"}
             </div>
-            {isPreset ? (
-              <div className="q">{ITEMS[sel].q}</div>
-            ) : (
-              <textarea value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="한국어 질문을 입력하세요" />
-            )}
+            {isPreset && <div className="q">{ITEMS[sel].q}</div>}
+            <input
+              className="qinput"
+              type="text"
+              value={custom}
+              onChange={(e) => { setCustom(e.target.value); if (e.target.value.trim()) setSel(-1); }}
+              onKeyDown={(e) => e.key === "Enter" && q && !busy && runLive()}
+              placeholder={isPreset ? "또는 직접 질문 입력 — Enter로 바로 생성" : "한국어 질문 입력 — Enter로 생성"}
+            />
           </div>
 
           <div className="acontrol">

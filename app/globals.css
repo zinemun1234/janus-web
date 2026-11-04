@@ -47,6 +47,10 @@ section{padding:18px 24px 28px;overflow-y:auto;max-height:calc(100vh - 79px)}
 .qbox textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
   color:var(--txt);font-size:15px;padding:8px 10px;resize:vertical;min-height:38px;font-family:inherit}
 .qbox textarea:focus{outline:none;border-color:var(--faint)}
+.qbox .qinput{display:block;width:100%;margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+  color:var(--txt);font-size:14px;padding:9px 12px;font-family:inherit}
+.qbox .qinput:focus{outline:none;border-color:var(--chat)}
+.qbox .qinput::placeholder{color:var(--faint)}
 
 .acontrol{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
 .arow{display:flex;align-items:center;gap:14px}
