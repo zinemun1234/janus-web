@@ -1,11 +1,13 @@
 {
+  "build": {
+    "env": {
+      "UV_EXTRA_INDEX_URL": "https://download.pytorch.org/whl/cpu"
+    }
+  },
   "functions": {
     "api/generate.py": {
       "memory": 2048,
       "maxDuration": 300
     }
-  },
-  "env": {
-    "VERCEL_SUPPORT_LARGE_FUNCTIONS": "1"
   }
 }
