@@ -81,6 +81,13 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(b)
 
     def do_GET(self):
+        # ?load=1 → 모델만 미리 로드 (페이지 진입 시 워밍 핑). 다운로드+세션 초기화 수행.
+        from urllib.parse import urlparse, parse_qs
+        if parse_qs(urlparse(self.path).query).get("load"):
+            try:
+                ensure_loaded()
+            except Exception as e:
+                return self._json(500, {"error": str(e)[:300]})
         self._json(200, {"status": "ok", "model": "JANUS-42M-onnx",
                          "loaded": _sess is not None, "models_dir": MODELS_DIR})
 

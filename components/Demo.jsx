@@ -35,6 +35,7 @@ export default function Demo() {
   const [alpha, setAlpha] = useState(0.5);
   const [live, setLive] = useState(null);     // {chat,merge,dark,info}
   const [busy, setBusy] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const curveRef = useRef(null), floorRef = useRef(null);
 
   const isPreset = sel >= 0;
@@ -110,10 +111,22 @@ export default function Demo() {
     });
   }, [alpha, curve]);
 
+  /* ---- 페이지 진입 시 모델 워밍 (fire-and-forget) ---- */
+  const [warm, setWarm] = useState(false);
+  useEffect(() => {
+    let dead = false;
+    fetch("/api/generate?load=1").then(r => r.json())
+      .then(d => { if (!dead && d.loaded) setWarm(true); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, []);
+
   /* ---- 실시간 생성 ---- */
   async function runLive() {
     if (!q || busy) return;
-    setBusy(true); setLive(null);
+    setBusy(true); setLive(null); setElapsed(0);
+    const t0 = Date.now();
+    const tick = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000);
     try {
       const r = await fetch("/api/generate", {
         method: "POST",
@@ -125,6 +138,7 @@ export default function Demo() {
     } catch (e) {
       setLive({ error: String(e).slice(0, 300) });
     } finally {
+      clearInterval(tick);
       setBusy(false);
     }
   }
@@ -204,13 +218,14 @@ export default function Demo() {
 
           <div className="livebar">
             <button className="livebtn" onClick={runLive} disabled={busy || !q}>
-              {busy ? "생성 중… (첫 호출은 ~30초)" : "⚡ 세 모델 실시간 생성"}
+              {busy ? `생성 중… ${elapsed}s` : "⚡ 세 모델 실시간 생성"}
             </button>
             <span className={`stat ${live ? "live" : ""}`}>
-              {busy ? "API 호출 중 — cold start면 모델 로딩 포함" :
+              {busy ? `API 호출 중 ${elapsed}s 경과 — cold start면 모델 로딩 포함, 최대 ~90초` :
                live?.error ? `오류: ${live.error}` :
                live ? `라이브 응답 도착 — ${live.info || ""}` :
-               "현재 표시는 사전생성(440건 캐시) — 버튼을 누르면 실시간 추론"}
+               warm ? "모델 예열 완료 — 실시간 생성 준비됨 (~20초)" :
+               "모델 예열 중… 사전생성(440건 캐시) 탐색 가능 — 버튼을 누르면 실시간 추론"}
             </span>
           </div>
 
