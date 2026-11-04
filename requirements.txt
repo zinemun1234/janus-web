@@ -1,5 +1,0 @@
-# Vercel Python 함수용 — CPU 전용 torch 휠 (CUDA 번들 제외 → 번들 크기 방어)
-# 빌드 실패 시 fallback: 버전 핀 제거하고 'torch'만 남기기
--f https://download.pytorch.org/whl/cpu
-torch==2.14.1+cpu
-sentencepiece
