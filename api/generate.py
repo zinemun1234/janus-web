@@ -87,7 +87,8 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             n = int(self.headers.get("Content-Length") or 0)
-            body = json.loads(self.rfile.read(n) or b"{}")
+            raw = self.rfile.read(n).decode("utf-8", errors="replace")
+            body = json.loads(raw or "{}")
             q = str(body.get("q") or "").strip()
             a = float(body.get("alpha", 0.5))
             if not q:
