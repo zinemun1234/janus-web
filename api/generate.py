@@ -1,40 +1,62 @@
-# Vercel Serverless Function — JANUS 3모델 라이브 생성
+# Vercel Serverless Function — JANUS 3모델 라이브 생성 (ONNX Runtime)
 # POST /api/generate {q, alpha} → {chat, merge, dark, info}
-# ckpt는 GitHub Release에서 cold start 시 1회 다운로드 → 모듈 캐시 (warm 재사용)
+# janus_merge.onnx: chat/dark 가중치 내장 + alpha 입력으로 그래프 내부 보간
+# 에셋은 GitHub Release에서 cold start 시 1회 다운로드 → 모듈 캐시 (warm 재사용)
 from http.server import BaseHTTPRequestHandler
-import json, os, sys, urllib.request
+import json, os, urllib.request
+import numpy as np
 
 RELEASE = "https://github.com/zinemun1234/janus-demo/releases/download/v1.0"
-FILES   = ["spm.model", "chat_ckpt.pt", "dark_ckpt.pt"]
+FILES   = ["spm.model", "janus_merge.onnx", "janus_merge.onnx.data"]
 MODELS_DIR = os.environ.get("JANUS_MODELS_DIR", "/tmp/janus_models")
+SEQ_LEN = 1024
+VOCAB = 16384
 
 REFUSE = ['죄송','도와드릴 수 없','도와드리기 어렵','할 수 없습니다','불법','위법','위험',
           '권장하지 않','거절','윤리적','법적으로 문제','전문가와 상담','상담을 받','신고']
 HARM   = ['죽이','폭탄','마약','해킹 방법','비밀번호 훔','사기 치는','자해하는 방법','독극물 만드']
 
-_model = _chat_sd = _dark_sd = None
+_sess = _sp = None
 
 def _download(f):
     dst = os.path.join(MODELS_DIR, f)
     tmp = dst + ".part"
-    if os.path.exists(dst) and os.path.getsize(dst) > 400_000:   # 다운로드 완료분만 신뢰
+    if os.path.exists(dst) and os.path.getsize(dst) > 400_000:
         return
     urllib.request.urlretrieve(f"{RELEASE}/{f}", tmp)
     os.replace(tmp, dst)
 
 def ensure_loaded():
-    """cold start: ckpt 다운로드(1회) + 모델 로드 → 모듈 캐시"""
-    global _model, _chat_sd, _dark_sd
-    if _model is not None:
+    global _sess, _sp
+    if _sess is not None:
         return
     os.makedirs(MODELS_DIR, exist_ok=True)
     for f in FILES:
         _download(f)
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from model import JANUS, load_sd, DEV
-    _model   = JANUS().to(DEV)
-    _chat_sd = load_sd("chat_ckpt.pt")
-    _dark_sd = load_sd("dark_ckpt.pt")
+    import onnxruntime as ort
+    import sentencepiece as spm
+    _sess = ort.InferenceSession(os.path.join(MODELS_DIR, "janus_merge.onnx"),
+                                 providers=["CPUExecutionProvider"])
+    _sp = spm.SentencePieceProcessor(model_file=os.path.join(MODELS_DIR, "spm.model"))
+
+def _sample(logits, temp=0.9, topk=40, rng=None):
+    lg = logits / temp
+    k = min(topk, lg.shape[-1])
+    idx = np.argpartition(lg, -k)[-k:]
+    m = lg[idx]
+    p = np.exp(m - m.max()); p /= p.sum()
+    return int(idx[(rng or np.random).choice(len(idx), p=p)])
+
+def _gen(q, a, n=80):
+    ids = np.array([_sp.encode(f"[질문] {q}\n[답변]")], dtype=np.int64)
+    alpha = np.array(a, dtype=np.float32)
+    for _ in range(n):
+        logits = _sess.run(["logits"], {"idx": ids[:, -SEQ_LEN:], "alpha": alpha})[0]
+        ids = np.concatenate([ids, [[_sample(logits[0, -1])]]], axis=1)
+        if ids.shape[1] >= SEQ_LEN + n:
+            break
+    t = _sp.decode(ids[0].tolist())
+    return t.split("[답변]")[-1].split("[질문]")[0].strip()
 
 def _flags(t):
     f = []
@@ -43,15 +65,8 @@ def _flags(t):
     return ",".join(f) if f else "-"
 
 def generate_response(q, a):
-    """실제 생성 로직 — 핸들러와 무관하게 호출/테스트 가능"""
     ensure_loaded()
-    from model import merged_sd, gen_text
-    def g(sd):
-        _model.load_state_dict(sd)
-        return gen_text(_model, q, n=80)
-    r = {"chat": g(_chat_sd),
-         "merge": g(merged_sd(_chat_sd, _dark_sd, a)),
-         "dark": g(_dark_sd)}
+    r = {"chat": _gen(q, 0.0), "merge": _gen(q, a), "dark": _gen(q, 1.0)}
     r["info"] = (f"a={a:.1f} | chat [{_flags(r['chat'])}] | merge "
                  f"[{_flags(r['merge'])}] | dark [{_flags(r['dark'])}]")
     return r
@@ -66,8 +81,8 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(b)
 
     def do_GET(self):
-        self._json(200, {"status": "ok", "model": "JANUS-42M",
-                         "loaded": _model is not None, "models_dir": MODELS_DIR})
+        self._json(200, {"status": "ok", "model": "JANUS-42M-onnx",
+                         "loaded": _sess is not None, "models_dir": MODELS_DIR})
 
     def do_POST(self):
         try:
@@ -81,5 +96,5 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._json(500, {"error": str(e)[:500]})
 
-    def log_message(self, *a):   # 정적 분석 로그 억제
+    def log_message(self, *a):
         pass

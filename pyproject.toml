@@ -3,11 +3,7 @@ name = "janus-web"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "torch==2.14.1+cpu",
+    "onnxruntime",
+    "numpy",
     "sentencepiece",
 ]
-
-# Vercel Python 빌드가 uv lock을 사용 — cpu 전용 휠 인덱스 명시 (CUDA 번들 방지)
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
