@@ -1,0 +1,8 @@
+▲ Next.js 16.4.5
+- Local:         http://localhost:3123
+- Network:       http://192.168.55.213:3123
+✓ Ready in 324ms
+⚠ Warning: Next.js ignored package-lock.json in C:\Users\USER because it would include your home directory (C:\Users\USER).
+ To use this directory, set `outputFileTracingRoot` in your Next.js config.
+
+✓ Running next.config took 42ms

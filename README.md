@@ -37,3 +37,4 @@ JANUS_MODELS_DIR=../janus-demo/models python -c "import sys; sys.path.insert(0,'
 
 ⚠️ 연구용 산출물 — 생성물은 실제 조언이 아니며 부정확할 수 있습니다.
 *관련: 정적 탐색 버전 https://zinemun1234.github.io/janus-demo/ · 모델 출처 JANUS TR-2026-03*
+
