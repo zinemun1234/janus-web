@@ -8,7 +8,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      {/* 브라우저 확장(예: ap-style 속성 주입)이 body 속성을 바꿔도 하이드레이션 경고가 뜨지 않게 함 */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
